@@ -1,0 +1,48 @@
+# Python environments
+.venv/
+.venv-1/
+venv/
+env/
+
+# Python caches and test output
+**/__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Packaging and build output
+build/
+dist/
+*.egg-info/
+
+# JavaScript dependencies and logs
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local configuration and operating-system files
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Runtime-generated application state
+CN/data/history/*.json
+CN/data/manifests/*.json
+
+# Local visual-regression artifacts
+CN/.m5-caret-qa/
+CN/.m5-qa/
+CN/.post-run-qa/
+CN/.target-picker-qa/
+CN/.verification-filter-qa/

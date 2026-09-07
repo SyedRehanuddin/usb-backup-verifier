@@ -1,0 +1,713 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Local CRC-32 USB backup integrity verification console.">
+    <title>USB Backup Verifier</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23111b29'/%3E%3Cpath d='M32 14v31m0-31 8 8m-8-8-8 8M22 31h-8v12a6 6 0 0 0 6 6h12m10-22h8v12a6 6 0 0 1-6 6H32' fill='none' stroke='%236da0f5' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}?v=1.0.12">
+    <script src="{{ url_for('static', path='/js/simulation.js') }}?v=1.0.1" defer></script>
+    <script src="{{ url_for('static', path='/js/history.js') }}?v=1.0.1" defer></script>
+    <script src="{{ url_for('static', path='/js/target-picker.js') }}?v=1.0.5" defer></script>
+    <script src="{{ url_for('static', path='/js/select-picker.js') }}?v=1.0.2" defer></script>
+    <script src="{{ url_for('static', path='/js/verification-results.js') }}?v=1.0.0" defer></script>
+    <script src="{{ url_for('static', path='/js/app.js') }}?v=1.0.17" defer></script>
+</head>
+<body data-app-mode="{{ app_mode }}">
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Application sidebar">
+            <div class="brand-block">
+                <div class="brand-mark" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M12 3v12m0-12 3 3m-3-3L9 6M8 11H5v5a2 2 0 0 0 2 2h5m4-9h3v5a2 2 0 0 1-2 2h-5m0-1v6m-2 0h4"/></svg>
+                </div>
+                <div class="brand-copy">
+                    <p class="brand-name">USB Backup Verifier</p>
+                    <p class="brand-subtitle">CRC-32 Integrity Console</p>
+                </div>
+            </div>
+            <nav class="primary-nav" aria-label="Primary navigation">
+                <p class="nav-label">Workspace</p>
+                <a class="nav-item active" href="#verification" data-view-link="verification" aria-label="Verification" aria-current="page">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v12H4zM8 10h8m-8 4h5"/></svg>
+                    <span>Verification</span>
+                </a>
+                <a class="nav-item" href="#error-lab" data-view-link="error-lab" aria-label="Error Lab">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 16H3L12 3Zm0 6v4m0 3v.01"/></svg>
+                    <span>Error Lab</span>
+                </a>
+                <a class="nav-item" href="#history" data-view-link="history" aria-label="History">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v15H4zM8 3v4m8-4v4M4 10h16m-12 4h3m2 0h3"/></svg>
+                    <span>History</span>
+                </a>
+                <a class="nav-item" href="#about" data-view-link="about" aria-label="About">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.01"/></svg>
+                    <span>About</span>
+                </a>
+            </nav>
+            <div class="sidebar-meta">
+                <div class="meta-row"><span>Version</span><strong>1.0</strong></div>
+                <p>{{ 'Hosted Demo Environment' if app_mode == 'demo' else 'Local CRC-32 Engine' }}</p>
+            </div>
+        </aside>
+
+        <main class="main-area">
+            <header class="topbar">
+                <div class="topbar-context"><h1 id="topbar-page-title">Verification</h1></div>
+                <div class="engine-status" id="engine-status" role="status" aria-live="polite">
+                    <span class="status-dot" aria-hidden="true"></span>
+                    <span>Checking local engine</span>
+                </div>
+                <span class="hosted-mode-badge" {% if app_mode != 'demo' %}hidden{% endif %}>Hosted Demo Mode</span>
+            </header>
+
+            <section class="content" id="verification-view" data-view="verification" aria-labelledby="page-title">
+                <div class="page-header">
+                    <div class="page-heading">
+                        <p class="section-kicker">CRC-32 Verification</p>
+                        <h2 id="page-title">Backup Integrity Verification</h2>
+                        <p>Compare the original folder with its backup to identify verified, corrupted, missing, or extra files.</p>
+                    </div>
+                    <div class="local-processing" aria-label="Processing environment information">
+                        <div class="local-processing-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6l8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+                        </div>
+                        <div><strong>{{ 'Hosted Demo Environment' if app_mode == 'demo' else 'Local Processing' }}</strong><span>{{ 'Bundled datasets processed server-side' if app_mode == 'demo' else 'Files stay on this device' }}</span></div>
+                    </div>
+                </div>
+
+                <section class="workspace-section" aria-labelledby="folder-selection-title">
+                    <div class="section-heading">
+                        <div><p class="section-label">Input folders</p><h3 id="folder-selection-title">Select folders to compare</h3></div>
+                    </div>
+                    <div class="folder-grid">
+                        <article class="folder-card" id="source-card">
+                            <div class="folder-card-header">
+                                <span class="card-number">01</span>
+                                <div class="folder-card-status" aria-hidden="true">
+                                    <span class="folder-ready-badge"><svg viewBox="0 0 24 24"><path d="m7 12 3 3 7-7"/></svg>Selected</span>
+                                    <div class="folder-icon"><svg viewBox="0 0 24 24"><path d="M3 7h7l2 2h9v10H3V7Z"/><path d="M3 11h18"/></svg></div>
+                                </div>
+                            </div>
+                            <h4>Trusted Source</h4>
+                            <p class="folder-description">Select the original folder to create the trusted reference.</p>
+                            <button class="button button-folder" id="select-source-button" type="button" {% if app_mode == 'demo' %}hidden{% endif %}>
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h7l2 2h9v10H3V7Z"/><path d="M12 13v5m-2-3 2-2 2 2"/></svg>
+                                <span id="select-source-label">Select Source Folder</span>
+                            </button>
+                            <div class="demo-dataset-control" id="source-demo-control" {% if app_mode != 'demo' %}hidden{% endif %}>
+                                <select id="source-demo-select" hidden aria-hidden="true" tabindex="-1"><option value="original_files">Original Files</option></select>
+                                <div class="history-select-picker demo-dataset-picker" id="source-demo-picker">
+                                    <button class="history-picker-trigger" id="source-demo-trigger" type="button" role="combobox" aria-label="Select Demo Source" aria-haspopup="listbox" aria-expanded="false" aria-controls="source-demo-listbox"><span data-picker-value>Original Files</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5 5 5-5"/></svg></button>
+                                    <div class="history-picker-listbox" id="source-demo-listbox" role="listbox" aria-label="Demo source datasets" hidden></div>
+                                </div>
+                            </div>
+                            <div class="selection-state" role="status" aria-live="polite">
+                                <span class="selection-indicator" aria-hidden="true"></span>
+                                <div><strong id="source-folder-name">No source folder selected</strong><span id="source-selection-detail">Choose a folder to create the reference.</span></div>
+                            </div>
+                            <dl class="folder-metadata">
+                                <div><dt>Files</dt><dd id="source-file-count">—</dd></div>
+                                <div><dt>Reference status</dt><dd id="source-reference-status">Not created</dd></div>
+                            </dl>
+                            <div class="saved-reference-note" id="saved-reference-note" hidden>
+                                <span>Saved reference</span>
+                                <strong id="saved-reference-summary"></strong>
+                            </div>
+                        </article>
+
+                        <article class="folder-card" id="backup-card">
+                            <div class="folder-card-header">
+                                <span class="card-number">02</span>
+                                <div class="folder-card-status" aria-hidden="true">
+                                    <span class="folder-ready-badge"><svg viewBox="0 0 24 24"><path d="m7 12 3 3 7-7"/></svg>Selected</span>
+                                    <div class="folder-icon"><svg viewBox="0 0 24 24"><path d="M3 7h7l2 2h9v10H3V7Z"/><path d="M3 11h18"/></svg></div>
+                                </div>
+                            </div>
+                            <h4>Backup Copy</h4>
+                            <p class="folder-description">Select the backup folder you want to check.</p>
+                            <button class="button button-folder" id="select-backup-button" type="button" {% if app_mode == 'demo' %}hidden{% endif %}>
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h7l2 2h9v10H3V7Z"/><path d="M12 13v5m-2-3 2-2 2 2"/></svg>
+                                <span id="select-backup-label">Select Backup Folder</span>
+                            </button>
+                            <div class="demo-dataset-control" id="backup-demo-control" {% if app_mode != 'demo' %}hidden{% endif %}>
+                                <select id="backup-demo-select" hidden aria-hidden="true" tabindex="-1">
+                                    <option value="" disabled selected>Select Demo Backup</option>
+                                    <option value="backup_clean">Clean Backup</option><option value="backup_corrupted">Corrupted Backup</option><option value="backup_missing">Missing File Backup</option><option value="backup_extra">Extra File Backup</option><option value="backup_mixed">Mixed Issues Backup</option>
+                                </select>
+                                <div class="history-select-picker demo-dataset-picker" id="backup-demo-picker">
+                                    <button class="history-picker-trigger" id="backup-demo-trigger" type="button" role="combobox" aria-label="Select Demo Backup" aria-haspopup="listbox" aria-expanded="false" aria-controls="backup-demo-listbox"><span data-picker-value>Select Demo Backup</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5 5 5-5"/></svg></button>
+                                    <div class="history-picker-listbox" id="backup-demo-listbox" role="listbox" aria-label="Demo backup datasets" hidden></div>
+                                </div>
+                            </div>
+                            <div class="selection-state" role="status" aria-live="polite">
+                                <span class="selection-indicator" aria-hidden="true"></span>
+                                <div><strong id="backup-folder-name">No backup folder selected</strong><span id="backup-selection-detail">Choose a backup folder to check.</span></div>
+                            </div>
+                            <dl class="folder-metadata">
+                                <div><dt>Files</dt><dd id="backup-file-count">—</dd></div>
+                                <div><dt>Status</dt><dd id="backup-status">Not selected</dd></div>
+                            </dl>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="workflow-panel" aria-labelledby="workflow-title">
+                    <div class="panel-heading-inline">
+                        <div><p class="section-label">Process</p><h3 id="workflow-title">Verification workflow</h3></div>
+                        <span>4 stages</span>
+                    </div>
+                    <ol class="workflow-steps">
+                        <li class="workflow-step" id="workflow-source" data-state="waiting">
+                            <span class="workflow-index">1</span><div><strong>Source</strong><span class="workflow-state">Not selected</span></div>
+                        </li>
+                        <li class="workflow-step" id="workflow-reference" data-state="not-created">
+                            <span class="workflow-index">2</span><div><strong>Reference</strong><span class="workflow-state">Not created</span></div>
+                        </li>
+                        <li class="workflow-step" id="workflow-backup" data-state="waiting">
+                            <span class="workflow-index">3</span><div><strong>Backup</strong><span class="workflow-state">Not selected</span></div>
+                        </li>
+                        <li class="workflow-step" id="workflow-verify" data-state="not-run">
+                            <span class="workflow-index">4</span><div><strong>Verify</strong><span class="workflow-state">Not run</span></div>
+                        </li>
+                    </ol>
+                </section>
+
+                <section class="action-panel" aria-labelledby="actions-title">
+                    <div class="action-copy">
+                        <div class="action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6l8-3Z"/><path d="M9 12h6"/></svg></div>
+                        <div>
+                            <h3 id="actions-title">Ready to begin</h3>
+                            <p id="actions-helper">Select a trusted source folder to create the reference.</p>
+                            <p class="reference-feedback" id="reference-feedback" role="status" aria-live="polite" hidden></p>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="button button-ghost" id="clear-selection-button" type="button" disabled>
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2-5.3M4 4v5h5"/></svg>
+                            Clear Selection
+                        </button>
+                        <button class="button button-secondary" id="generate-reference-button" type="button" disabled>
+                            <span class="button-spinner" id="generate-reference-spinner" aria-hidden="true" hidden></span>
+                            <span id="generate-reference-label">Generate Reference</span>
+                        </button>
+                        <button class="button button-primary" id="verify-backup-button" type="button" disabled>
+                            <span class="button-spinner" id="verify-backup-spinner" aria-hidden="true" hidden></span>
+                            <span id="verify-backup-label">Verify Backup</span>
+                        </button>
+                    </div>
+                </section>
+
+                <section class="summary-section" aria-labelledby="summary-title">
+                    <div class="section-heading compact-heading">
+                        <div><p class="section-label" id="summary-state-label">No current result</p><h3 id="summary-title">Verification summary</h3></div>
+                    </div>
+                    <div class="summary-grid">
+                        <article class="summary-card summary-verified">
+                            <div class="summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></div>
+                            <div><span>Verified</span><strong id="summary-verified-count">0</strong></div>
+                        </article>
+                        <article class="summary-card summary-corrupted">
+                            <div class="summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg></div>
+                            <div><span>Corrupted</span><strong id="summary-corrupted-count">0</strong></div>
+                        </article>
+                        <article class="summary-card summary-missing">
+                            <div class="summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 9 16H3L12 3Z"/><path d="M12 9v4m0 3v.01"/></svg></div>
+                            <div><span>Missing</span><strong id="summary-missing-count">0</strong></div>
+                        </article>
+                        <article class="summary-card summary-extra">
+                            <div class="summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8m-4-4h8"/></svg></div>
+                            <div><span>Extra</span><strong id="summary-extra-count">0</strong></div>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="results-panel" aria-labelledby="results-title">
+                    <div class="results-header">
+                        <div><p class="section-label">File comparison</p><h3 id="results-title">Verification Results</h3></div>
+                        <div class="results-controls">
+                            <label class="visually-hidden" id="results-filter-label" for="results-filter">Filter verification results</label>
+                            <select id="results-filter" hidden aria-hidden="true" tabindex="-1" disabled>
+                                <option value="all">All Files</option>
+                                <option value="verified">Verified</option>
+                                <option value="corrupted">Corrupted</option>
+                                <option value="missing">Missing</option>
+                                <option value="extra">Extra</option>
+                            </select>
+                            <div class="history-select-picker verification-results-picker" id="results-filter-picker">
+                                <button class="history-picker-trigger" id="results-filter-trigger" type="button" role="combobox" aria-labelledby="results-filter-label results-filter-value" aria-haspopup="listbox" aria-expanded="false" aria-controls="results-filter-listbox">
+                                    <span data-picker-value id="results-filter-value">All Files</span>
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+                                </button>
+                                <div class="history-picker-listbox" id="results-filter-listbox" role="listbox" aria-labelledby="results-filter-label" hidden></div>
+                            </div>
+                            <button class="button button-ghost button-small" id="export-csv-button" type="button" disabled>
+                                <span class="button-spinner" id="export-csv-spinner" aria-hidden="true" hidden></span>
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14"/></svg>
+                                <span id="export-csv-label">Export CSV</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <colgroup>
+                                <col class="result-status-column">
+                                <col class="result-file-column">
+                                <col class="result-path-column">
+                                <col class="result-crc-column">
+                                <col class="result-crc-column">
+                            </colgroup>
+                            <thead><tr><th scope="col">Status</th><th scope="col">File Name</th><th scope="col">Relative Path</th><th scope="col">Source CRC-32</th><th scope="col">Backup CRC-32</th></tr></thead>
+                            <tbody id="verification-results-body">
+                                <tr>
+                                    <td class="empty-results" colspan="5">
+                                        <div class="empty-results-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5V3Z"/><path d="M15 3v5h5M9 13h6m-6 4h4"/></svg></div>
+                                        <strong>No verification results yet.</strong>
+                                        <span>Create a trusted reference, then select a backup folder to run verification.</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </section>
+
+            <section class="content lab-content" id="error-lab-view" data-view="error-lab" aria-labelledby="lab-page-title" hidden>
+                <div class="page-header">
+                    <div class="page-heading">
+                        <p class="section-kicker">CRC-32 Test Environment</p>
+                        <h2 id="lab-page-title">Error Simulation Lab</h2>
+                        <p>Create controlled backup errors and observe how CRC-32 integrity verification responds.</p>
+                    </div>
+                    <div class="local-processing lab-safety-heading" aria-label="Non-destructive testing information">
+                        <div class="local-processing-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6l8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+                        </div>
+                        <div><strong>Non-destructive testing</strong><span>Source and backup files stay unchanged</span></div>
+                    </div>
+                </div>
+
+                <section class="lab-reference-panel" aria-labelledby="lab-reference-title">
+                    <div class="lab-reference-copy">
+                        <div class="lab-reference-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5V3Z"/><path d="M15 3v5h5M9 13h6m-6 4h4"/></svg>
+                        </div>
+                        <div>
+                            <p class="section-label">Trusted baseline</p>
+                            <h3 id="lab-reference-title">Reference status</h3>
+                            <p id="lab-reference-detail">Checking saved reference…</p>
+                        </div>
+                    </div>
+                    <span class="reference-status-badge" id="lab-reference-badge">Checking</span>
+                    <button class="button button-secondary" id="lab-go-verification-button" type="button" data-go-view="verification" hidden>Go to Verification</button>
+                </section>
+
+                <section class="lab-setup-grid" aria-label="Step 01 — Backup input">
+                    <article class="lab-panel" id="lab-backup-card">
+                        <div class="lab-panel-heading">
+                            <div><p class="section-label">Step 01</p><h3>Select backup folder</h3></div>
+                            <span class="lab-step-status" id="lab-backup-status">Not selected</span>
+                        </div>
+                        <p class="lab-panel-description">Choose a clean backup copy to use as the in-memory simulation baseline.</p>
+                        <button class="button button-folder" id="lab-select-backup-button" type="button" {% if app_mode == 'demo' %}hidden{% endif %}>
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h7l2 2h9v10H3V7Z"/><path d="M12 13v5m-2-3 2-2 2 2"/></svg>
+                            <span id="lab-select-backup-label">Select Backup Folder</span>
+                        </button>
+                        <div class="demo-dataset-control" id="lab-demo-control" {% if app_mode != 'demo' %}hidden{% endif %}>
+                            <select id="lab-demo-select" hidden aria-hidden="true" tabindex="-1"><option value="backup_clean">Clean Backup</option></select>
+                            <div class="history-select-picker demo-dataset-picker" id="lab-demo-picker">
+                                <button class="history-picker-trigger" id="lab-demo-trigger" type="button" role="combobox" aria-label="Select Demo Backup" aria-haspopup="listbox" aria-expanded="false" aria-controls="lab-demo-listbox"><span data-picker-value>Clean Backup</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5 5 5-5"/></svg></button>
+                                <div class="history-picker-listbox" id="lab-demo-listbox" role="listbox" aria-label="Error Lab demo backup datasets" hidden></div>
+                            </div>
+                        </div>
+                        <div class="selection-state" id="lab-backup-selection" role="status" aria-live="polite">
+                            <span class="selection-indicator" aria-hidden="true"></span>
+                            <div><strong id="lab-backup-name">No backup folder selected</strong><span id="lab-backup-detail">Choose a backup folder to begin.</span></div>
+                        </div>
+                    </article>
+                </section>
+
+                <fieldset class="simulation-methods">
+                    <legend class="visually-hidden">Choose simulation method</legend>
+                    <div class="simulation-methods-header">
+                        <p class="section-label">Step 02</p>
+                        <h3>Choose simulation method</h3>
+                    </div>
+                    <div class="simulation-grid">
+                        <label class="simulation-option">
+                            <input type="radio" name="lab-simulation" value="modify-byte" disabled>
+                            <span class="simulation-option-header"><span class="simulation-option-code">M1</span><span class="simulation-option-marker" aria-hidden="true"></span></span>
+                            <strong>Modify Byte</strong>
+                            <span class="simulation-option-description">Changes one byte while keeping the file size unchanged.</span>
+                            <em class="result-badge result-corrupted">Corrupted</em>
+                        </label>
+                        <label class="simulation-option">
+                            <input type="radio" name="lab-simulation" value="append-data" disabled>
+                            <span class="simulation-option-header"><span class="simulation-option-code">M2</span><span class="simulation-option-marker" aria-hidden="true"></span></span>
+                            <strong>Append Data</strong>
+                            <span class="simulation-option-description">Adds a small controlled byte sequence to the selected file.</span>
+                            <em class="result-badge result-corrupted">Corrupted</em>
+                        </label>
+                        <label class="simulation-option">
+                            <input type="radio" name="lab-simulation" value="truncate-file" disabled>
+                            <span class="simulation-option-header"><span class="simulation-option-code">M3</span><span class="simulation-option-marker" aria-hidden="true"></span></span>
+                            <strong>Truncate File</strong>
+                            <span class="simulation-option-description">Removes a controlled number of bytes from the end of the file.</span>
+                            <em class="result-badge result-corrupted">Corrupted</em>
+                        </label>
+                        <label class="simulation-option">
+                            <input type="radio" name="lab-simulation" value="remove-file" disabled>
+                            <span class="simulation-option-header"><span class="simulation-option-code">M4</span><span class="simulation-option-marker" aria-hidden="true"></span></span>
+                            <strong>Remove File</strong>
+                            <span class="simulation-option-description">Simulates the selected backup file as missing without deleting it from disk.</span>
+                            <em class="result-badge result-missing">Missing</em>
+                        </label>
+                        <label class="simulation-option">
+                            <input type="radio" name="lab-simulation" value="add-extra" disabled>
+                            <span class="simulation-option-header"><span class="simulation-option-code">M5</span><span class="simulation-option-marker" aria-hidden="true"></span></span>
+                            <strong>Add Extra File</strong>
+                            <span class="simulation-option-description">Creates a temporary file that does not exist in the trusted reference.</span>
+                            <em class="result-badge result-extra">Extra</em>
+                        </label>
+                    </div>
+                </fieldset>
+
+                <article class="lab-panel target-panel" aria-labelledby="lab-target-title">
+                    <div class="lab-panel-heading">
+                        <div><p class="section-label">Step 03</p><h3 id="lab-target-title">Choose target file</h3></div>
+                        <span class="lab-step-status" id="lab-target-status">Not ready</span>
+                    </div>
+                    <p class="lab-panel-description" id="lab-target-help">Complete Steps 01 and 02 first.</p>
+                    <div id="lab-target-control">
+                        <label class="select-label" id="lab-target-label" for="lab-target-trigger">Relative file path</label>
+                        <select class="lab-select" id="lab-target-select" disabled hidden>
+                            <option value="">Select a target file</option>
+                        </select>
+                        <div class="lab-target-picker" id="lab-target-picker">
+                            <button class="lab-select lab-target-trigger" id="lab-target-trigger" type="button" role="combobox" aria-labelledby="lab-target-label" aria-describedby="lab-target-help lab-target-note" aria-haspopup="listbox" aria-expanded="false" aria-controls="lab-target-listbox" disabled>
+                                <span id="lab-target-value">Select a target file</span>
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+                            </button>
+                            <div class="lab-target-listbox" id="lab-target-listbox" role="listbox" aria-labelledby="lab-target-label" hidden></div>
+                        </div>
+                    </div>
+                    <div class="lab-target-info" id="lab-target-info" role="note" aria-describedby="lab-target-note" hidden>
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M12 12v6m-3-3h6"/></svg>
+                        <span>Automatically generated during simulation</span>
+                    </div>
+                    <p class="field-note" id="lab-target-note">Full relative paths keep duplicate filenames distinct.</p>
+                </article>
+
+                <section class="lab-action-panel" aria-labelledby="lab-action-title">
+                    <div class="lab-action-notice">
+                        <div class="action-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6l8-3Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+                        <div>
+                            <p class="section-label">Step 04</p>
+                            <h3 id="lab-action-title">Run controlled simulation</h3>
+                            <p>Mutations are applied only to temporary in-memory data.</p>
+                            <p class="reference-feedback" id="lab-feedback" role="status" aria-live="polite" hidden></p>
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <span class="lab-step-status" id="lab-action-status">Not run</span>
+                        <button class="button button-ghost" id="lab-reset-button" type="button" disabled>Reset Lab</button>
+                        <button class="button button-primary" id="lab-run-button" type="button" disabled>
+                            <span class="button-spinner" id="lab-run-spinner" aria-hidden="true" hidden></span>
+                            <span id="lab-run-label">Run Simulation</span>
+                        </button>
+                    </div>
+                </section>
+
+                <section class="lab-result-panel" id="lab-result-panel" aria-labelledby="lab-result-title" aria-live="polite" hidden>
+                    <div class="lab-result-header">
+                        <div><p class="section-label">Simulation complete</p><h3 id="lab-result-title">Simulation Result</h3></div>
+                        <span class="simulation-pass-badge" id="lab-result-badge">Expected result detected</span>
+                    </div>
+                    <dl class="lab-result-grid">
+                        <div><dt>Method</dt><dd id="lab-result-simulation">—</dd></div>
+                        <div><dt id="lab-result-target-label">Target</dt><dd id="lab-result-target">—</dd></div>
+                        <div><dt>Expected Detection</dt><dd id="lab-result-expected">—</dd></div>
+                        <div><dt>Detected Result</dt><dd id="lab-result-actual">—</dd></div>
+                        <div><dt>Outcome</dt><dd id="lab-result-outcome">—</dd></div>
+                    </dl>
+                    <div class="lab-detail-grid">
+                        <div class="lab-crc-card"><span>Reference CRC-32</span><strong id="lab-source-crc">—</strong></div>
+                        <div class="lab-crc-card"><span>Simulated Backup CRC-32</span><strong id="lab-backup-crc">—</strong></div>
+                        <div class="lab-size-card" id="lab-size-card" hidden>
+                            <span>Original size</span><strong id="lab-original-size">—</strong>
+                            <span>Simulated size</span><strong id="lab-simulated-size">—</strong>
+                        </div>
+                    </div>
+                    <div class="lab-summary" aria-label="Simulation verification totals">
+                        <div><span>Verified</span><strong id="lab-summary-verified">0</strong></div>
+                        <div><span>Corrupted</span><strong id="lab-summary-corrupted">0</strong></div>
+                        <div><span>Missing</span><strong id="lab-summary-missing">0</strong></div>
+                        <div><span>Extra</span><strong id="lab-summary-extra">0</strong></div>
+                    </div>
+                </section>
+            </section>
+
+            <section class="content history-content" id="history-view" data-view="history" aria-labelledby="history-page-title" hidden>
+                <div class="page-header history-page-header">
+                    <div class="page-heading">
+                        <p class="section-kicker">Verification Records</p>
+                        <h2 id="history-page-title">Verification History</h2>
+                        <p>Review previous backup integrity checks and inspect detected differences.</p>
+                    </div>
+                    <div class="local-processing" aria-label="History storage information">
+                        <div class="local-processing-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24"><path d="M4 5h16v15H4zM8 3v4m8-4v4M4 10h16"/><path d="M8 14h3m2 0h3m-8 3h3"/></svg>
+                        </div>
+                        <div><strong>Local history</strong><span>Stored on this device</span></div>
+                    </div>
+                </div>
+
+                <div class="history-metrics" aria-label="History totals">
+                    <article class="history-metric"><span>Total checks</span><strong id="history-total-count">0</strong></article>
+                    <article class="history-metric history-metric-clean"><span>Clean checks</span><strong id="history-clean-count">0</strong></article>
+                    <article class="history-metric history-metric-issues"><span>Checks with issues</span><strong id="history-issues-count">0</strong></article>
+                </div>
+
+                <section class="history-list-panel" aria-labelledby="history-list-title">
+                    <div class="history-panel-header">
+                        <div><p class="section-label">Verification history</p><h3 id="history-list-title">Completed checks</h3></div>
+                        <button class="button button-ghost button-small history-clear-button" id="history-clear-button" type="button" disabled>
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5"/></svg>
+                            Clear History
+                        </button>
+                    </div>
+                    <div class="history-toolbar" id="history-toolbar" hidden>
+                        <label class="history-search" for="history-search-input">
+                            <span class="visually-hidden">Search history</span>
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4"/></svg>
+                            <input id="history-search-input" type="search" placeholder="Search history" autocomplete="off">
+                        </label>
+                        <div class="history-toolbar-field">
+                            <span id="history-status-label">Status</span>
+                            <select id="history-status-filter" hidden aria-hidden="true" tabindex="-1">
+                                <option value="all">All</option>
+                                <option value="clean">Clean</option>
+                                <option value="issues">Issues</option>
+                            </select>
+                            <div class="history-select-picker" id="history-status-picker">
+                                <button class="history-picker-trigger" id="history-status-trigger" type="button" role="combobox" aria-labelledby="history-status-label history-status-value" aria-haspopup="listbox" aria-expanded="false" aria-controls="history-status-listbox">
+                                    <span data-picker-value id="history-status-value">All</span>
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+                                </button>
+                                <div class="history-picker-listbox" id="history-status-listbox" role="listbox" aria-labelledby="history-status-label" hidden></div>
+                            </div>
+                        </div>
+                        <div class="history-toolbar-field">
+                            <span id="history-sort-label">Sort</span>
+                            <select id="history-sort-order" hidden aria-hidden="true" tabindex="-1">
+                                <option value="newest">Newest first</option>
+                                <option value="oldest">Oldest first</option>
+                            </select>
+                            <div class="history-select-picker" id="history-sort-picker">
+                                <button class="history-picker-trigger" id="history-sort-trigger" type="button" role="combobox" aria-labelledby="history-sort-label history-sort-value" aria-haspopup="listbox" aria-expanded="false" aria-controls="history-sort-listbox">
+                                    <span data-picker-value id="history-sort-value">Newest first</span>
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+                                </button>
+                                <div class="history-picker-listbox" id="history-sort-listbox" role="listbox" aria-labelledby="history-sort-label" hidden></div>
+                            </div>
+                        </div>
+                        <output class="history-result-count" id="history-result-count" aria-live="polite"></output>
+                    </div>
+                    <p class="history-feedback" id="history-feedback" role="status" aria-live="polite" hidden></p>
+                    <div class="history-list" id="history-list"></div>
+                    <div class="history-filter-empty" id="history-filter-empty" hidden>
+                        <div class="empty-results-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m16 16 4 4M8 11h6"/></svg></div>
+                        <strong>No matching checks</strong>
+                        <span>Try changing your search or filters.</span>
+                    </div>
+                    <div class="history-empty" id="history-empty">
+                        <div class="empty-results-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h16v15H4zM8 3v4m8-4v4M4 10h16"/><path d="M8 15h8"/></svg></div>
+                        <strong>No verification history yet</strong>
+                        <span>Completed backup checks will appear here.</span>
+                        <button class="button button-primary" type="button" data-go-view="verification">Go to Verification</button>
+                    </div>
+                </section>
+
+                <section class="history-detail-panel" id="history-detail-panel" aria-labelledby="history-detail-title" hidden>
+                    <div class="history-panel-header history-detail-header">
+                        <div><p class="section-label">Check details</p><h3 id="history-detail-title">Verification details</h3></div>
+                        <div class="history-detail-actions">
+                            <button class="button button-secondary button-small" id="history-export-csv-button" type="button" disabled>
+                                <span class="button-spinner" id="history-export-csv-spinner" aria-hidden="true" hidden></span>
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14"/></svg>
+                                <span id="history-export-csv-label">Export CSV</span>
+                            </button>
+                            <button class="button button-ghost button-small" id="history-detail-close" type="button" aria-label="Close verification details">Close</button>
+                        </div>
+                    </div>
+                    <dl class="history-detail-meta">
+                        <div><dt>Checked</dt><dd id="history-detail-checked">—</dd></div>
+                        <div><dt>Reference</dt><dd id="history-detail-reference">—</dd></div>
+                        <div><dt>Backup</dt><dd id="history-detail-backup">—</dd></div>
+                        <div><dt>Overall result</dt><dd><span class="history-status" id="history-detail-overall">—</span></dd></div>
+                        <div><dt>Reference created</dt><dd id="history-detail-reference-date">—</dd></div>
+                    </dl>
+                    <div class="history-detail-summary" aria-label="Selected check totals">
+                        <div><span>Verified</span><strong id="history-detail-verified">0</strong></div>
+                        <div><span>Corrupted</span><strong id="history-detail-corrupted">0</strong></div>
+                        <div><span>Missing</span><strong id="history-detail-missing">0</strong></div>
+                        <div><span>Extra</span><strong id="history-detail-extra">0</strong></div>
+                    </div>
+                    <div class="history-detail-results-header">
+                        <div class="history-detail-results-title">
+                            <h4>File results</h4>
+                            <output id="history-results-count" aria-live="polite"></output>
+                        </div>
+                        <div class="history-detail-filter">
+                            <span id="history-results-filter-label">Filter</span>
+                            <select id="history-results-filter" hidden aria-hidden="true" tabindex="-1">
+                                <option value="all">All Files</option>
+                                <option value="verified">Verified</option>
+                                <option value="corrupted">Corrupted</option>
+                                <option value="missing">Missing</option>
+                                <option value="extra">Extra</option>
+                            </select>
+                            <div class="history-select-picker" id="history-results-picker">
+                                <button class="history-picker-trigger" id="history-results-trigger" type="button" role="combobox" aria-labelledby="history-results-filter-label history-results-value" aria-haspopup="listbox" aria-expanded="false" aria-controls="history-results-listbox">
+                                    <span data-picker-value id="history-results-value">All Files</span>
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+                                </button>
+                                <div class="history-picker-listbox" id="history-results-listbox" role="listbox" aria-labelledby="history-results-filter-label" hidden></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th scope="col">Status</th><th scope="col">File</th><th scope="col">Relative Path</th><th scope="col">Source CRC-32</th><th scope="col">Backup CRC-32</th></tr></thead>
+                            <tbody id="history-results-body"></tbody>
+                        </table>
+                    </div>
+                </section>
+            </section>
+
+            <section class="content about-content" id="about-view" data-view="about" aria-labelledby="about-page-title" hidden>
+                <div class="page-header about-page-header">
+                    <div class="page-heading">
+                        <p class="section-kicker">Project Information</p>
+                        <h2 id="about-page-title">About USB Backup Verifier</h2>
+                        <p>A local CRC-32 based utility that compares a trusted source with a backup and detects changed, missing, or unexpected files.</p>
+                    </div>
+                    <div class="about-version-badge" aria-label="Application version 1.0, local application">
+                        <span>Version 1.0</span>
+                        <strong>Local application</strong>
+                    </div>
+                </div>
+
+                <div class="about-layout">
+                    <section class="about-panel about-overview" aria-labelledby="about-purpose-title">
+                        <div>
+                            <div class="about-section-heading">
+                                <p class="section-label">What this tool does</p>
+                                <h3 id="about-purpose-title">Backup integrity verification</h3>
+                            </div>
+                            <p>The application creates a trusted CRC-32 reference from an original folder and compares a backup against it. Each file is classified as Verified, Corrupted, Missing, or Extra.</p>
+                        </div>
+                        <div class="about-status-strip" aria-label="Verification result categories">
+                            <span class="about-status status-verified">Verified</span>
+                            <span class="about-status status-corrupted">Corrupted</span>
+                            <span class="about-status status-missing">Missing</span>
+                            <span class="about-status status-extra">Extra</span>
+                        </div>
+                    </section>
+
+                    <section class="about-section" aria-labelledby="about-workflow-title">
+                        <div class="about-section-heading">
+                            <p class="section-label">How it works</p>
+                            <h3 id="about-workflow-title">Four-step workflow</h3>
+                        </div>
+                        <ol class="about-process-list">
+                            <li><span>01</span><div><strong>Trusted Source</strong><p>Select the original folder.</p></div></li>
+                            <li><span>02</span><div><strong>Generate Reference</strong><p>Create trusted CRC-32 values.</p></div></li>
+                            <li><span>03</span><div><strong>Select Backup</strong><p>Choose the backup to inspect.</p></div></li>
+                            <li><span>04</span><div><strong>Verify</strong><p>Compare the backup with the reference.</p></div></li>
+                        </ol>
+                    </section>
+
+                    <section class="about-section" aria-labelledby="about-status-title">
+                        <div class="about-section-heading">
+                            <p class="section-label">Status meanings</p>
+                            <h3 id="about-status-title">Understand each result</h3>
+                        </div>
+                        <div class="about-definition-grid">
+                            <article class="about-definition definition-verified"><span>Verified</span><p>Source and backup match.</p></article>
+                            <article class="about-definition definition-corrupted"><span>Corrupted</span><p>The file exists but its CRC-32 differs.</p></article>
+                            <article class="about-definition definition-missing"><span>Missing</span><p>The source file is absent from the backup.</p></article>
+                            <article class="about-definition definition-extra"><span>Extra</span><p>The backup contains an unexpected file.</p></article>
+                        </div>
+                    </section>
+
+                    <div class="about-support-grid">
+                        <section class="about-panel about-crc-panel" aria-labelledby="about-crc-title">
+                            <div class="about-section-heading">
+                                <p class="section-label">CRC-32</p>
+                                <h3 id="about-crc-title">CRC-32 Integrity Check</h3>
+                            </div>
+                            <p>CRC-32 creates a checksum from file data. If a file changes, its checksum will normally change, allowing accidental corruption to be detected.</p>
+                            <p class="about-technical-note">CRC-32 is designed for error detection, not cryptographic security.</p>
+                        </section>
+
+                        <section class="about-panel about-features" aria-labelledby="about-features-title">
+                            <div class="about-section-heading">
+                                <p class="section-label">Capabilities</p>
+                                <h3 id="about-features-title">Key features</h3>
+                            </div>
+                            <ul class="about-feature-list">
+                                <li>Recursive folder verification</li>
+                                <li>CRC-32 reference generation</li>
+                                <li>Verified / Corrupted / Missing / Extra detection</li>
+                                <li>Non-destructive Error Simulation Lab</li>
+                                <li>Verification History</li>
+                                <li>CSV report export</li>
+                                <li>Nested folder support</li>
+                                <li>{{ 'Hosted demo processing' if app_mode == 'demo' else 'Local-only processing' }}</li>
+                            </ul>
+                        </section>
+                    </div>
+
+                    <section class="about-panel about-lab-info" aria-labelledby="about-lab-title">
+                        <div>
+                            <div class="about-section-heading"><p class="section-label">Controlled demonstration</p><h3 id="about-lab-title">Error Simulation Lab</h3></div>
+                            <p>Demonstrates controlled file changes so CRC-32 detection can be tested without modifying the original files.</p>
+                        </div>
+                        <ul class="about-simulation-list" aria-label="Available error simulations">
+                            <li>Modify Byte</li><li>Append Data</li><li>Truncate File</li><li>Remove File</li><li>Add Extra File</li>
+                        </ul>
+                    </section>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <div class="dialog-backdrop" id="reference-replace-dialog" hidden>
+        <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="reference-replace-title" aria-describedby="reference-replace-description">
+            <div class="confirm-dialog-icon reference-replace-icon" aria-hidden="true">!</div>
+            <p class="section-kicker">Trusted reference</p>
+            <h2 id="reference-replace-title">Replace trusted reference?</h2>
+            <p id="reference-replace-description">This will replace the saved CRC-32 reference with the currently selected source folder. Future backup checks will use the new reference. Verification History will be preserved.</p>
+            <div class="confirm-dialog-actions">
+                <button class="button button-ghost" id="reference-replace-cancel" type="button">Cancel</button>
+                <button class="button button-primary" id="reference-replace-confirm" type="button">Replace Reference</button>
+            </div>
+        </section>
+    </div>
+
+    <div class="dialog-backdrop" id="history-clear-dialog" hidden>
+        <section class="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="history-clear-title" aria-describedby="history-clear-description">
+            <div class="confirm-dialog-icon" aria-hidden="true">!</div>
+            <p class="section-kicker">Permanent action</p>
+            <h2 id="history-clear-title">Clear verification history?</h2>
+            <p id="history-clear-description">This will permanently remove all saved verification records from this device. This action cannot be undone.</p>
+            <div class="confirm-dialog-actions">
+                <button class="button button-ghost" id="history-clear-cancel" type="button">Cancel</button>
+                <button class="button button-danger" id="history-clear-confirm" type="button">Clear History</button>
+            </div>
+        </section>
+    </div>
+</body>
+</html>
