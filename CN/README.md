@@ -39,20 +39,29 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in a browser.
 
 With no environment configuration, the server binds only to `127.0.0.1` and is not exposed publicly.
 
-## Hosted demo mode
+## Hosted static demo
 
-Render uses `USB_VERIFIER_MODE=demo`. In this mode the UI offers only the six
-small datasets committed under `demo_data/`; the server never initializes
-Tkinter and never accepts a browser-supplied filesystem path. The same Python
-manifest, CRC-32, verifier, simulation, History, and CSV code paths remain in use.
+The independent `static_demo/` application is the Render-hosted presentation
+version. It contains only HTML, CSS, JavaScript, and bundled demonstration data:
 
-Render blueprint commands are defined in the repository-root `render.yaml`
-(with `CN` configured as the service root):
+- CRC-32 and verification run entirely in the browser.
+- Error Lab mutations use fresh in-memory byte arrays and never change fixtures.
+- Verification History is stored in the current browser's `localStorage`.
+- CSV reports are generated on demand with browser `Blob` downloads.
+- No FastAPI server, Python process, folder picker, file input, or browser folder
+  permission is used.
 
-```text
-Build: pip install -r requirements.txt
-Start: uvicorn web_app:app --host 0.0.0.0 --port $PORT
+The repository-root `render.yaml` declares a Render Static Site with `CN` as its
+root and `static_demo` as its publish directory. The local Python application
+and its native-folder workflow remain separate and unchanged.
+
+To test the static version without FastAPI:
+
+```powershell
+python -m http.server 8004 --directory static_demo
 ```
+
+Then open [http://127.0.0.1:8004](http://127.0.0.1:8004).
 
 ## Test
 
@@ -60,6 +69,11 @@ Start: uvicorn web_app:app --host 0.0.0.0 --port $PORT
 python -m unittest discover -s tests -p "test_*.py"
 node --test tests/test_*.js
 ```
+
+`tests/static_demo_audit.cjs` exercises the static version in Edge and Chrome,
+including all verification datasets, all Error Lab methods, History, CSV,
+hash-route refreshes, and responsive layouts. It uses a basic static HTTP server
+only and does not start FastAPI.
 
 The optional `tests/showcase_audit.cjs` browser audit uses installed Playwright
 and Edge, with `SHOWCASE_PYTHON` pointing to the Python executable. It starts an
