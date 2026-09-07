@@ -1,5 +1,4 @@
 const engineStatus = document.querySelector("#engine-status");
-const appMode = document.body.dataset.appMode === "demo" ? "demo" : "local";
 const sourceCard = document.querySelector("#source-card");
 const backupCard = document.querySelector("#backup-card");
 const selectSourceButton = document.querySelector("#select-source-button");
@@ -36,7 +35,7 @@ const referenceReplaceDialog = document.querySelector("#reference-replace-dialog
 const historyClearDialog = document.querySelector("#history-clear-dialog");
 const historyUtilities = globalThis.HistoryUI;
 const verificationResultsUtilities = globalThis.VerificationResultsUI;
-const staticDemoData = globalThis.StaticDemoData;
+const browserFolderSelection = globalThis.BrowserFolderSelection;
 const staticVerification = globalThis.StaticVerification;
 const staticErrorLab = globalThis.StaticErrorLab;
 const staticHistoryStore = globalThis.StaticHistoryStore;
@@ -56,12 +55,10 @@ const historyResultsPicker = new globalThis.DarkSelectPicker(
     historyResultsFilter,
     document.querySelector("#history-results-picker"),
 );
-const sourceDemoSelect = document.querySelector("#source-demo-select");
-const backupDemoSelect = document.querySelector("#backup-demo-select");
-const labDemoSelect = document.querySelector("#lab-demo-select");
-const sourceDemoPicker = new globalThis.DarkSelectPicker(sourceDemoSelect, document.querySelector("#source-demo-picker"));
-const backupDemoPicker = new globalThis.DarkSelectPicker(backupDemoSelect, document.querySelector("#backup-demo-picker"));
-const labDemoPicker = new globalThis.DarkSelectPicker(labDemoSelect, document.querySelector("#lab-demo-picker"));
+const sourceFolderInput = document.querySelector("#source-folder-input");
+const backupFolderInput = document.querySelector("#backup-folder-input");
+const labFolderInput = document.querySelector("#lab-folder-input");
+const REFERENCE_STORAGE_KEY = "usb-backup-verifier.static-reference.v1";
 
 const STATUS_KEYS = ["verified", "corrupted", "missing", "extra"];
 const STATUS_LABELS = {
@@ -154,13 +151,9 @@ function updateVerificationAuxiliaryControls() {
     );
     selectSourceButton.disabled = busy;
     selectBackupButton.disabled = busy;
-    sourceDemoSelect.disabled = busy;
-    backupDemoSelect.disabled = busy;
     clearSelectionButton.disabled = busy || !hasClearableState;
     resultsFilter.disabled = verificationRunning || !verificationSummary;
     resultsPicker.sync();
-    sourceDemoPicker.sync();
-    backupDemoPicker.sync();
 }
 
 function selectedSourceMatchesSavedReference() {
@@ -319,7 +312,7 @@ function updateFolderSelection(kind, selection) {
     document.querySelector(`#${kind}-selection-detail`).textContent = fileLabel;
     document.querySelector(`#${kind}-file-count`).textContent = selection.file_count;
     (isSource ? selectSourceLabel : selectBackupLabel).textContent = isSource
-        ? "Change Source Folder"
+        ? "Change Trusted Source Folder"
         : "Change Backup Folder";
     setWorkflowState(isSource ? "#workflow-source" : "#workflow-backup", "ready");
     if (isSource) {
@@ -342,7 +335,7 @@ function resetFolderSelection(kind) {
         : "Choose a backup folder to check.";
     document.querySelector(`#${kind}-file-count`).textContent = "—";
     (isSource ? selectSourceLabel : selectBackupLabel).textContent = isSource
-        ? "Select Source Folder"
+        ? "Select Trusted Source Folder"
         : "Select Backup Folder";
     setWorkflowState(isSource ? "#workflow-source" : "#workflow-backup", "waiting");
     if (isSource) {
@@ -513,25 +506,70 @@ function isValidVerificationResponse(result) {
     ));
 }
 
-async function loadCurrentReference() {
+function referenceSnapshot(dataset, createdAt = new Date().toISOString()) {
+    return {
+        version: 1,
+        exists: true,
+        source_name: dataset.name,
+        file_count: dataset.files.length,
+        total_size_bytes: dataset.files.reduce((total, file) => total + file.size_bytes, 0),
+        created_at: createdAt,
+        files: dataset.files.map((file) => ({
+            file: file.file,
+            relative_path: file.relative_path,
+            size_bytes: file.size_bytes,
+            crc32: file.crc32,
+        })),
+    };
+}
+
+function validReferenceSnapshot(value) {
+    return Boolean(
+        value
+        && value.version === 1
+        && value.exists === true
+        && typeof value.source_name === "string"
+        && typeof value.created_at === "string"
+        && Number.isInteger(value.file_count)
+        && value.file_count > 0
+        && Array.isArray(value.files)
+        && value.files.length === value.file_count
+        && value.files.every((file) => (
+            typeof file.file === "string"
+            && typeof file.relative_path === "string"
+            && Number.isInteger(file.size_bytes)
+            && /^[0-9A-F]{8}$/.test(file.crc32)
+        ))
+    );
+}
+
+function restoreReferenceDataset(snapshot) {
+    return {
+        name: snapshot.source_name,
+        file_count: snapshot.file_count,
+        relative_paths: snapshot.files.map((file) => file.relative_path),
+        files: snapshot.files.map((file) => ({...file})),
+    };
+}
+
+function loadCurrentReference() {
     try {
-        referenceDataset = await staticDemoData.loadDataset("original_files");
-        sourceSelection = await staticDemoData.loadDataset("original_files");
-        referenceSourceSelectionId = sourceSelection.selection_id;
-        updateFolderSelection("source", sourceSelection);
-        const reference = {
-            exists: true,
-            source_name: sourceSelection.name,
-            file_count: sourceSelection.file_count,
-            total_size_bytes: sourceSelection.files.reduce((total, file) => total + file.size_bytes, 0),
-            created_at: new Date().toISOString(),
-        };
-        setReferenceDisplay(reference);
+        const parsed = JSON.parse(localStorage.getItem(REFERENCE_STORAGE_KEY) || "null");
+        if (!validReferenceSnapshot(parsed)) {
+            if (parsed !== null) localStorage.removeItem(REFERENCE_STORAGE_KEY);
+            referenceDataset = null;
+            setReferenceDisplay(null);
+            updateActionMessage();
+            return;
+        }
+        referenceDataset = restoreReferenceDataset(parsed);
+        setReferenceDisplay(parsed);
         updateActionMessage();
     } catch {
+        referenceDataset = null;
         setReferenceDisplay(null);
         updateActionMessage();
-        showFeedback("error", "Unable to read the saved reference.");
+        localStorage.removeItem(REFERENCE_STORAGE_KEY);
     }
 }
 
@@ -545,16 +583,16 @@ async function generateReference() {
     setGenerating(true);
 
     try {
-        referenceDataset = sourceSelection;
+        const generatedDataset = staticVerification.datasetFromFiles(
+            sourceSelection.name,
+            sourceSelection.files,
+        );
+        const snapshot = referenceSnapshot(generatedDataset);
+        referenceDataset = restoreReferenceDataset(snapshot);
         referenceSourceSelectionId = sourceSelection.selection_id;
         resetVerificationResults();
-        setReferenceDisplay({
-            exists: true,
-            source_name: sourceSelection.name,
-            file_count: sourceSelection.file_count,
-            total_size_bytes: sourceSelection.files.reduce((total, file) => total + file.size_bytes, 0),
-            created_at: new Date().toISOString(),
-        });
+        localStorage.setItem(REFERENCE_STORAGE_KEY, JSON.stringify(snapshot));
+        setReferenceDisplay(snapshot);
         updateActionMessage();
         showFeedback(
             "success",
@@ -634,8 +672,17 @@ async function verifyBackup() {
     }
 }
 
-async function requestNativeFolder(purpose, datasetId = null) {
-    const selection = await staticDemoData.loadDataset(datasetId);
+async function requestBrowserFolder(purpose) {
+    const input = purpose === "source"
+        ? sourceFolderInput
+        : (purpose === "lab-backup" ? labFolderInput : backupFolderInput);
+    const picked = await browserFolderSelection.chooseDirectory(input);
+    if (!picked || picked.cancelled) return picked;
+    const selection = purpose === "source"
+        ? picked
+        : staticVerification.datasetFromFiles(picked.name, picked.files);
+    selection.selection_id = picked.selection_id;
+    selection.method = picked.method;
     if (
         typeof selection.selection_id !== "string"
         || typeof selection.name !== "string"
@@ -650,14 +697,11 @@ async function requestNativeFolder(purpose, datasetId = null) {
     return selection;
 }
 
-function releaseNativeFolder(selection) {
+function releaseBrowserFolder(selection) {
     void selection;
 }
 
 async function selectVerificationFolder(kind) {
-    const datasetId = appMode === "demo"
-        ? (kind === "source" ? sourceDemoSelect.value : backupDemoSelect.value)
-        : null;
     folderSelecting = true;
     selectSourceButton.setAttribute("aria-busy", String(kind === "source"));
     selectBackupButton.setAttribute("aria-busy", String(kind === "backup"));
@@ -665,8 +709,11 @@ async function selectVerificationFolder(kind) {
     updateVerifyButton();
     updateVerificationAuxiliaryControls();
     try {
-        const selection = await requestNativeFolder(kind, datasetId);
-        if (!selection) return;
+        const selection = await requestBrowserFolder(kind);
+        if (!selection || selection.cancelled) {
+            if (selection?.message) showFeedback("error", selection.message);
+            return;
+        }
 
         clearFeedback();
         resetVerificationResults();
@@ -674,12 +721,12 @@ async function selectVerificationFolder(kind) {
             const previousSelection = sourceSelection;
             sourceSelection = selection;
             updateFolderSelection("source", sourceSelection);
-            releaseNativeFolder(previousSelection);
+            releaseBrowserFolder(previousSelection);
         } else {
             const previousSelection = backupSelection;
             backupSelection = selection;
             updateFolderSelection("backup", backupSelection);
-            releaseNativeFolder(previousSelection);
+            releaseBrowserFolder(previousSelection);
         }
         updateActionMessage();
     } catch (error) {
@@ -699,8 +746,6 @@ async function selectVerificationFolder(kind) {
 
 selectSourceButton.addEventListener("click", () => selectVerificationFolder("source"));
 selectBackupButton.addEventListener("click", () => selectVerificationFolder("backup"));
-sourceDemoSelect.addEventListener("change", () => selectVerificationFolder("source"));
-backupDemoSelect.addEventListener("change", () => selectVerificationFolder("backup"));
 generateReferenceButton.addEventListener("click", () => {
     if (savedReference && sourceSelection) {
         referenceReplaceReturnFocus = document.activeElement;
@@ -715,7 +760,7 @@ resultsFilter.addEventListener("change", renderResults);
 
 clearSelectionButton.addEventListener("click", () => {
     for (const selection of [sourceSelection, backupSelection]) {
-        releaseNativeFolder(selection);
+        releaseBrowserFolder(selection);
     }
     sourceSelection = null;
     backupSelection = null;
@@ -962,7 +1007,7 @@ function setLabRunning(isRunning) {
 }
 
 function resetLab() {
-    releaseNativeFolder(labBackupSelection);
+    releaseBrowserFolder(labBackupSelection);
     labBackupSelection = null;
     updateLabBackupButtonLabel();
     labSimulationMethod = "";
@@ -1416,17 +1461,18 @@ function showView(requestedView, updateHash = true) {
     window.scrollTo({ top: 0, behavior: "instant" });
 }
 
-async function selectLabBackup(datasetId = null) {
+async function selectLabBackup() {
     labSelectBackupButton.disabled = true;
-    labDemoSelect.disabled = true;
-    labDemoPicker.sync();
     labSelectBackupButton.setAttribute("aria-busy", "true");
     try {
-        const selection = await requestNativeFolder("backup", datasetId);
-        if (!selection) return;
+        const selection = await requestBrowserFolder("lab-backup");
+        if (!selection || selection.cancelled) {
+            if (selection?.message) showLabFeedback("error", selection.message);
+            return;
+        }
         const previousSelection = labBackupSelection;
         labBackupSelection = selection;
-        releaseNativeFolder(previousSelection);
+        releaseBrowserFolder(previousSelection);
         updateLabBackupButtonLabel();
         clearLabFeedback();
         resetLabResult();
@@ -1446,13 +1492,10 @@ async function selectLabBackup(datasetId = null) {
     } finally {
         labSelectBackupButton.removeAttribute("aria-busy");
         labSelectBackupButton.disabled = labRunning;
-        labDemoSelect.disabled = labRunning;
-        labDemoPicker.sync();
     }
 }
 
 labSelectBackupButton.addEventListener("click", () => selectLabBackup());
-labDemoSelect.addEventListener("change", () => selectLabBackup(labDemoSelect.value));
 
 document.querySelectorAll('input[name="lab-simulation"]').forEach((input) => {
     input.addEventListener("change", () => {
@@ -1541,7 +1584,4 @@ const initialView = ["verification", "error-lab", "history", "about"].includes(w
     : "verification";
 showView(initialView, false);
 resetLab();
-void (async () => {
-    await loadCurrentReference();
-    await selectLabBackup("backup_clean");
-})();
+loadCurrentReference();

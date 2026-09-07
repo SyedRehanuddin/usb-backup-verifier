@@ -33,7 +33,7 @@
     }
 
     function datasetFromFiles(name, files) {
-        return {
+        const dataset = {
             name,
             files: files.map((file) => {
                 const bytes = new Uint8Array(file.bytes);
@@ -46,6 +46,9 @@
                 };
             }),
         };
+        dataset.file_count = dataset.files.length;
+        dataset.relative_paths = dataset.files.map((file) => file.relative_path);
+        return dataset;
     }
 
     function makeHistoryRecord(result, reference) {

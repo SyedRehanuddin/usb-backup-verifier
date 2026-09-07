@@ -12,6 +12,7 @@ const simulation = require('../static_demo/js/simulation.js');
 globalThis.ErrorLabSimulation = simulation;
 const errorLab = require('../static_demo/js/error-lab.js');
 const historyStore = require('../static_demo/js/history-store.js');
+const folderSelection = require('../static_demo/js/folder-selection.js');
 
 const paths = {
   original_files: ['attendance.csv', 'config.json', 'image.png', 'nested/lab_record.bin', 'notes.txt'],
@@ -86,7 +87,50 @@ test('static CSV contains the presentation schema and protects formula-like cell
   assert.match(csv, /"'=unsafe"/);
 });
 
-test('static distribution has no backend or browser folder permission APIs', () => {
+test('directory handle scanning preserves nested binary paths without retaining handles', async () => {
+  const binary = new Uint8Array([0, 255, 17, 128]);
+  const fileEntry = bytes => ({kind: 'file', async getFile() { return {async arrayBuffer() { return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength); }}; }});
+  const nested = {kind: 'directory', async *entries() { yield ['lab_record.bin', fileEntry(binary)]; }};
+  const rootHandle = {
+    name: 'original_files',
+    async *entries() {
+      yield ['attendance.csv', fileEntry(new TextEncoder().encode('name,present\n'))];
+      yield ['nested', nested];
+    },
+  };
+  const selection = await folderSelection.enumerateHandle(rootHandle);
+  assert.equal(selection.name, 'original_files');
+  assert.deepEqual(selection.relative_paths, ['attendance.csv', 'nested/lab_record.bin']);
+  assert.deepEqual(Array.from(selection.files[1].bytes), Array.from(binary));
+  assert.equal(Object.values(selection).includes(rootHandle), false);
+});
+
+test('directory picker cancellation and denial preserve the caller state', async () => {
+  const abort = Object.assign(new Error('cancelled'), {name: 'AbortError'});
+  const denied = Object.assign(new Error('denied'), {name: 'NotAllowedError'});
+  assert.deepEqual(await folderSelection.chooseDirectory(null, async () => { throw abort; }), {cancelled: true, denied: false, message: ''});
+  assert.deepEqual(await folderSelection.chooseDirectory(null, async () => { throw denied; }), {
+    cancelled: true,
+    denied: true,
+    message: 'Folder access was not granted. Your current selection was not changed.',
+  });
+});
+
+test('directory input fallback removes only the root segment and preserves nested paths', async () => {
+  const makeFile = (pathValue, values) => ({
+    name: pathValue.split('/').at(-1),
+    webkitRelativePath: pathValue,
+    async arrayBuffer() { return Uint8Array.from(values).buffer; },
+  });
+  const selection = await folderSelection.enumerateFileInput([
+    makeFile('backup_clean/notes.txt', [65, 66]),
+    makeFile('backup_clean/nested/lab_record.bin', [0, 255]),
+  ]);
+  assert.equal(selection.name, 'backup_clean');
+  assert.deepEqual(selection.relative_paths, ['nested/lab_record.bin', 'notes.txt']);
+});
+
+test('static distribution uses browser folders without backend endpoints', () => {
   const files = [];
   const visit = directory => fs.readdirSync(directory, {withFileTypes: true}).forEach(entry => {
     const full = path.join(directory, entry.name);
@@ -94,5 +138,7 @@ test('static distribution has no backend or browser folder permission APIs', () 
   });
   visit(path.join(root, 'static_demo'));
   const source = files.filter(file => /\.(html|js|css)$/.test(file)).map(file => fs.readFileSync(file, 'utf8')).join('\n');
-  for (const forbidden of ['/api/', 'showDirectoryPicker', 'webkitdirectory', 'FileList', 'FormData', 'type="file"']) assert.equal(source.includes(forbidden), false, forbidden);
+  for (const forbidden of ['/api/', 'FormData', 'multipart/form-data']) assert.equal(source.includes(forbidden), false, forbidden);
+  for (const required of ['showDirectoryPicker', 'webkitdirectory', 'Browser permission is required', 'type="file"']) assert.equal(source.includes(required), true, required);
+  assert.equal(fs.readFileSync(path.join(root, 'static_demo', 'index.html'), 'utf8').includes('js/demo-data.js'), false);
 });

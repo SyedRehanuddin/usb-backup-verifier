@@ -390,6 +390,17 @@ svg {
     gap: 18px;
 }
 
+.folder-permission-note {
+    margin: 12px 2px 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+#lab-backup-card .folder-permission-note {
+    margin-top: 12px;
+}
+
 .folder-card {
     min-width: 0;
     padding: 22px;

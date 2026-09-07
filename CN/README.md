@@ -39,17 +39,25 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in a browser.
 
 With no environment configuration, the server binds only to `127.0.0.1` and is not exposed publicly.
 
-## Hosted static demo
+## Hosted static application
 
 The independent `static_demo/` application is the Render-hosted presentation
-version. It contains only HTML, CSS, JavaScript, and bundled demonstration data:
+version. It contains only HTML, CSS, and JavaScript:
 
 - CRC-32 and verification run entirely in the browser.
-- Error Lab mutations use fresh in-memory byte arrays and never change fixtures.
+- Chrome and Edge use `showDirectoryPicker()` after a user click; other browsers
+  fall back to a directory-capable file input.
+- Folders are read recursively as binary data while relative paths are preserved.
+- Error Lab mutations use fresh in-memory byte arrays and never change selected files.
 - Verification History is stored in the current browser's `localStorage`.
+- Trusted references persist only file names, relative paths, sizes, and CRC values;
+  file contents and directory handles are not persisted.
 - CSV reports are generated on demand with browser `Blob` downloads.
-- No FastAPI server, Python process, folder picker, file input, or browser folder
-  permission is used.
+- No FastAPI server, Python process, multipart upload, or remote file processing is used.
+- Browser permission is required to read a selected folder; files remain on the device.
+
+Bundled datasets remain in the repository only as automated test fixtures and
+are not part of the normal hosted workflow.
 
 The repository-root `render.yaml` declares a Render Static Site with `CN` as its
 root and `static_demo` as its publish directory. The local Python application
