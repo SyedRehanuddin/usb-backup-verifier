@@ -563,10 +563,6 @@
                         <h2 id="about-page-title">About USB Backup Verifier</h2>
                         <p>A browser-based CRC-32 verifier that compares folders you select and detects changed, missing, or unexpected files without uploading them.</p>
                     </div>
-                    <div class="about-version-badge" aria-label="Application version 1.0, browser CRC-32 mode">
-                        <span>Version 1.0</span>
-                        <strong>Browser CRC-32 mode</strong>
-                    </div>
                 </div>
 
                 <div class="about-layout">
@@ -577,7 +573,7 @@
                                 <h3 id="about-purpose-title">Backup integrity verification</h3>
                             </div>
                             <p>Select a trusted source and backup folder manually. After browser permission is granted, CRC-32 is calculated locally and each file is classified as Verified, Corrupted, Missing, or Extra.</p>
-                            <p class="about-technical-note">Selected files are read only for this browser session and are not uploaded to a server.</p>
+                            <p class="about-technical-note">Selected files are processed only in this browser session and are not uploaded to a server.</p>
                         </div>
                         <div class="about-status-strip" aria-label="Verification result categories">
                             <span class="about-status status-verified">Verified</span>
@@ -644,7 +640,7 @@
                     <section class="about-panel about-lab-info" aria-labelledby="about-lab-title">
                         <div>
                             <div class="about-section-heading"><p class="section-label">Controlled demonstration</p><h3 id="about-lab-title">Error Simulation Lab</h3></div>
-                            <p>Demonstrates controlled file changes so CRC-32 detection can be tested without modifying the original files.</p>
+                            <p>Demonstrates controlled file changes so CRC-32 detection can be tested without modifying the selected source or backup files.</p>
                         </div>
                         <ul class="about-simulation-list" aria-label="Available error simulations">
                             <li>Modify Byte</li><li>Append Data</li><li>Truncate File</li><li>Remove File</li><li>Add Extra File</li>

@@ -147,6 +147,10 @@ async function auditBrowser(executablePath, browserLabel, full) {
     });
     assert.deepEqual(topTitle, {text: title, size: '19px', weight: '650'}); checks += 1;
   }
+  await page.locator('[data-view-link="about"]').click();
+  ok(await page.locator('#about-view .about-version-badge').count() === 0, `${browserLabel} About version and mode card removed`);
+  ok((await page.locator('#about-view .about-overview .about-technical-note').textContent()).trim() === 'Selected files are processed only in this browser session and are not uploaded to a server.', `${browserLabel} About session privacy wording`);
+  ok((await page.locator('#about-view .about-lab-info > div > p').textContent()).trim() === 'Demonstrates controlled file changes so CRC-32 detection can be tested without modifying the selected source or backup files.', `${browserLabel} About Error Lab wording`);
   await page.locator('[data-view-link="verification"]').click();
   const disabledControls = await page.evaluate(() => {
     const picker = getComputedStyle(document.querySelector('#results-filter-trigger'));
@@ -273,6 +277,9 @@ async function auditBrowser(executablePath, browserLabel, full) {
       ok(await page.evaluate(() => document.scrollingElement.scrollWidth <= innerWidth), `${route} no overflow ${width}`);
     }
   }
+  await page.setViewportSize({width: 390, height: 844});
+  await page.goto(`${base}/#about`);
+  ok(await page.evaluate(() => document.scrollingElement.scrollWidth <= innerWidth), 'About no overflow 390');
 
   await page.getByRole('link', {name: 'History', exact: true}).click();
   await page.getByRole('button', {name: 'Clear History'}).click();
