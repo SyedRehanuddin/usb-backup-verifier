@@ -135,6 +135,10 @@ async function auditBrowser(executablePath, browserLabel, full) {
   await page.reload();
   ok(await page.locator('#source-folder-name').textContent() === 'No source folder selected', `${browserLabel} fresh source state`);
   ok(await page.locator('#source-reference-status').textContent() === 'Not created', `${browserLabel} fresh reference state`);
+  ok((await Promise.all(['verified', 'corrupted', 'missing', 'extra'].map(status =>
+    page.locator(`#summary-${status}-count`).textContent()))).every(value => value === '—'), `${browserLabel} empty summary uses dashes`);
+  ok(await page.locator('#engine-status, .hosted-mode-badge, .sidebar-meta, #verification-view .local-processing').count() === 0, `${browserLabel} removed mode UI is absent`);
+  ok((await page.locator('#verification-view .folder-permission-note').textContent()).trim() === 'Folder access requires browser permission. Files are processed in this browser and are not uploaded.', `${browserLabel} permission note wording`);
   await prepareReference(page);
   ok(await page.locator('#source-selection-detail').textContent() === '5 files selected', `${browserLabel} real source selection`);
   ok(await page.evaluate(() => {
@@ -176,6 +180,9 @@ async function auditBrowser(executablePath, browserLabel, full) {
   await page.locator('#select-backup-button').click();
   ok(await page.locator('#backup-folder-name').textContent() === previousBackup, 'denial preserves selection');
   ok((await page.locator('#reference-feedback').textContent()).includes('not granted'), 'permission denial message');
+  await page.locator('#clear-selection-button').click();
+  ok((await Promise.all(['verified', 'corrupted', 'missing', 'extra'].map(status =>
+    page.locator(`#summary-${status}-count`).textContent()))).every(value => value === '—'), 'clear selection restores empty summary dashes');
 
   await page.getByRole('link', {name: 'History', exact: true}).click();
   await page.waitForFunction(() => document.querySelector('#history-total-count').textContent === '5');

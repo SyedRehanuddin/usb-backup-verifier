@@ -1,4 +1,3 @@
-const engineStatus = document.querySelector("#engine-status");
 const sourceCard = document.querySelector("#source-card");
 const backupCard = document.querySelector("#backup-card");
 const selectSourceButton = document.querySelector("#select-source-button");
@@ -86,9 +85,6 @@ let referenceReplaceReturnFocus = null;
 let historyDialogReturnFocus = null;
 let historyDetailReturnFocus = null;
 let historyDetailReturnScrollY = null;
-
-engineStatus.classList.add("ready");
-engineStatus.lastElementChild.textContent = "Browser CRC-32 engine ready";
 
 function setWorkflowState(id, state, label) {
     const step = document.querySelector(id);
@@ -366,8 +362,9 @@ function setVerifying(isVerifying) {
 
 function updateSummary(summary) {
     STATUS_KEYS.forEach((status) => {
-        const count = summary ? summary[status] : 0;
-        document.querySelector(`#summary-${status}-count`).textContent = String(count);
+        document.querySelector(`#summary-${status}-count`).textContent = summary
+            ? String(summary[status])
+            : "—";
     });
 }
 

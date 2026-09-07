@@ -397,6 +397,30 @@ svg {
     line-height: 1.5;
 }
 
+#verification-view .folder-permission-note {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0 0;
+    padding: 8px 10px;
+    background: rgba(75, 141, 248, 0.05);
+    border: 1px solid rgba(75, 141, 248, 0.16);
+    border-radius: 8px;
+}
+
+#verification-view .folder-permission-note svg {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    fill: none;
+    stroke: #7fa8e6;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+#verification-view .folder-permission-note p { margin: 0; }
+
 #lab-backup-card .folder-permission-note {
     margin-top: 12px;
 }

@@ -50,20 +50,11 @@
                     <span>About</span>
                 </a>
             </nav>
-            <div class="sidebar-meta">
-                <div class="meta-row"><span>Version</span><strong>1.0</strong></div>
-                <p>Browser CRC-32 Mode</p>
-            </div>
         </aside>
 
         <main class="main-area">
             <header class="topbar">
                 <div class="topbar-context"><h1 id="topbar-page-title">Verification</h1></div>
-                <div class="engine-status" id="engine-status" role="status" aria-live="polite">
-                    <span class="status-dot" aria-hidden="true"></span>
-                    <span>Checking browser engine</span>
-                </div>
-                <span class="hosted-mode-badge">Browser CRC-32 Mode</span>
             </header>
 
             <section class="content" id="verification-view" data-view="verification" aria-labelledby="page-title">
@@ -72,12 +63,6 @@
                         <p class="section-kicker">CRC-32 Verification</p>
                         <h2 id="page-title">Backup Integrity Verification</h2>
                         <p>Compare the original folder with its backup to identify verified, corrupted, missing, or extra files.</p>
-                    </div>
-                    <div class="local-processing" aria-label="Processing environment information">
-                        <div class="local-processing-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6l8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
-                        </div>
-                        <div><strong>Local browser processing</strong><span>Selected files stay on this device</span></div>
                     </div>
                 </div>
 
@@ -140,7 +125,10 @@
                             </dl>
                         </article>
                     </div>
-                    <p class="folder-permission-note">Browser permission is required to read the selected folder. Files are processed locally in this browser and are not uploaded.</p>
+                    <div class="folder-permission-note" role="note">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8v.01"/></svg>
+                        <p>Folder access requires browser permission. Files are processed in this browser and are not uploaded.</p>
+                    </div>
                 </section>
 
                 <section class="workflow-panel" aria-labelledby="workflow-title">
@@ -196,19 +184,19 @@
                     <div class="summary-grid">
                         <article class="summary-card summary-verified">
                             <div class="summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.2 2.2 4.8-5"/></svg></div>
-                            <div><span>Verified</span><strong id="summary-verified-count">0</strong></div>
+                            <div><span>Verified</span><strong id="summary-verified-count">—</strong></div>
                         </article>
                         <article class="summary-card summary-corrupted">
                             <div class="summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg></div>
-                            <div><span>Corrupted</span><strong id="summary-corrupted-count">0</strong></div>
+                            <div><span>Corrupted</span><strong id="summary-corrupted-count">—</strong></div>
                         </article>
                         <article class="summary-card summary-missing">
                             <div class="summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 9 16H3L12 3Z"/><path d="M12 9v4m0 3v.01"/></svg></div>
-                            <div><span>Missing</span><strong id="summary-missing-count">0</strong></div>
+                            <div><span>Missing</span><strong id="summary-missing-count">—</strong></div>
                         </article>
                         <article class="summary-card summary-extra">
                             <div class="summary-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8m-4-4h8"/></svg></div>
-                            <div><span>Extra</span><strong id="summary-extra-count">0</strong></div>
+                            <div><span>Extra</span><strong id="summary-extra-count">—</strong></div>
                         </article>
                     </div>
                 </section>
