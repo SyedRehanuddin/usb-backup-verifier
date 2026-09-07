@@ -139,6 +139,24 @@ async function auditBrowser(executablePath, browserLabel, full) {
     page.locator(`#summary-${status}-count`).textContent()))).every(value => value === '—'), `${browserLabel} empty summary uses dashes`);
   ok(await page.locator('#engine-status, .hosted-mode-badge, .sidebar-meta, #verification-view .local-processing').count() === 0, `${browserLabel} removed mode UI is absent`);
   ok((await page.locator('#verification-view .folder-permission-note').textContent()).trim() === 'Folder access requires browser permission. Files are processed in this browser and are not uploaded.', `${browserLabel} permission note wording`);
+  for (const [route, title] of [['verification', 'Verification'], ['error-lab', 'Error Lab'], ['history', 'History'], ['about', 'About']]) {
+    await page.locator(`[data-view-link="${route}"]`).click();
+    const topTitle = await page.locator('#topbar-page-title').evaluate(element => {
+      const style = getComputedStyle(element);
+      return {text: element.textContent, size: style.fontSize, weight: style.fontWeight};
+    });
+    assert.deepEqual(topTitle, {text: title, size: '19px', weight: '650'}); checks += 1;
+  }
+  await page.locator('[data-view-link="verification"]').click();
+  const disabledControls = await page.evaluate(() => {
+    const picker = getComputedStyle(document.querySelector('#results-filter-trigger'));
+    const csv = getComputedStyle(document.querySelector('#export-csv-button'));
+    return [picker.height, csv.height, picker.borderRadius, csv.borderRadius, picker.backgroundColor, csv.backgroundColor];
+  });
+  assert.equal(disabledControls[0], disabledControls[1]);
+  assert.equal(disabledControls[2], disabledControls[3]);
+  assert.equal(disabledControls[4], disabledControls[5]);
+  checks += 3;
   await prepareReference(page);
   ok(await page.locator('#source-selection-detail').textContent() === '5 files selected', `${browserLabel} real source selection`);
   ok(await page.evaluate(() => {
@@ -161,6 +179,16 @@ async function auditBrowser(executablePath, browserLabel, full) {
     assert.deepEqual(await summary(page), totals); checks += 1;
     ok(await page.locator('#verification-results-body').getByText('nested/lab_record.bin', {exact: true}).count() === 1, `${name} nested result`);
   }
+  await page.mouse.move(0, 0);
+  await page.waitForTimeout(220);
+  const enabledControls = await page.evaluate(() => {
+    const picker = getComputedStyle(document.querySelector('#results-filter-trigger'));
+    const csv = getComputedStyle(document.querySelector('#export-csv-button'));
+    return [picker.height, csv.height, picker.borderRadius, csv.borderRadius, picker.backgroundColor, csv.backgroundColor];
+  });
+  assert.deepEqual(enabledControls.slice(0, 4), [enabledControls[1], enabledControls[1], enabledControls[3], enabledControls[3]]);
+  assert.equal(enabledControls[4], enabledControls[5]);
+  checks += 2;
 
   for (const [labelText, expectedRows] of [['All Files', 6], ['Verified', 3], ['Corrupted', 1], ['Missing', 1], ['Extra', 1]]) {
     await choose(page, 'results-filter', labelText);

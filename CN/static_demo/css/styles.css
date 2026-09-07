@@ -217,8 +217,8 @@ svg {
 
 .topbar h1 {
     margin: 0;
-    color: var(--text-secondary);
-    font-size: 13px;
+    color: #d8e2ef;
+    font-size: 19px;
     font-weight: 650;
     letter-spacing: 0.01em;
 }
@@ -839,7 +839,26 @@ select:disabled {
 .results-controls { display: flex; align-items: center; gap: 9px; }
 .verification-results-picker,
 .verification-results-picker .history-picker-trigger { min-width: 132px; }
-.verification-results-picker .history-picker-trigger:disabled { cursor: not-allowed; opacity: 0.58; }
+.verification-results-picker .history-picker-trigger {
+    min-height: 34px;
+    color: var(--text-secondary);
+    background: transparent;
+    border-color: var(--border);
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 650;
+}
+.verification-results-picker .history-picker-trigger:hover:not(:disabled) {
+    background: var(--surface-hover);
+    border-color: #38506f;
+}
+.verification-results-picker .history-picker-trigger:disabled {
+    color: #98a7ba;
+    background: #121d2b;
+    border-color: #34445a;
+    cursor: not-allowed;
+    opacity: 1;
+}
 .button-small { min-height: 34px; font-size: 11px; }
 
 .table-wrap {
