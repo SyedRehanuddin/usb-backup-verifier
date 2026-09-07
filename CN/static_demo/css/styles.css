@@ -391,13 +391,6 @@ svg {
 }
 
 .folder-permission-note {
-    margin: 12px 2px 0;
-    color: var(--text-muted);
-    font-size: 12px;
-    line-height: 1.5;
-}
-
-#verification-view .folder-permission-note {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -406,9 +399,12 @@ svg {
     background: rgba(75, 141, 248, 0.05);
     border: 1px solid rgba(75, 141, 248, 0.16);
     border-radius: 8px;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
 }
 
-#verification-view .folder-permission-note svg {
+.folder-permission-note svg {
     width: 16px;
     height: 16px;
     flex: 0 0 16px;
@@ -419,7 +415,7 @@ svg {
     stroke-linejoin: round;
 }
 
-#verification-view .folder-permission-note p { margin: 0; }
+.folder-permission-note p { margin: 0; }
 
 #lab-backup-card .folder-permission-note {
     margin-top: 12px;

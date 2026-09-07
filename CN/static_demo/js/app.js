@@ -947,7 +947,7 @@ function updateLabTargetControl() {
     if (!definition) {
         labTargetHelp.textContent = hasBackup
             ? "Choose a simulation method in Step 02."
-            : "Complete Steps 01 and 02 first.";
+            : "Complete the reference setup, Step 01, and Step 02 first.";
         labTargetStatus.textContent = "Not ready";
         labTargetSelect.disabled = true;
     } else if (definition.requiresTarget) {

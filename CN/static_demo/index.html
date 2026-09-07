@@ -297,7 +297,10 @@
                             <span class="selection-indicator" aria-hidden="true"></span>
                             <div><strong id="lab-backup-name">No backup folder selected</strong><span id="lab-backup-detail">Choose a backup folder to begin.</span></div>
                         </div>
-                        <p class="folder-permission-note">Browser permission is required to read the selected folder. Files are processed locally in this browser and are not uploaded.</p>
+                        <div class="folder-permission-note" role="note">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8v.01"/></svg>
+                            <p>Folder access requires browser permission. Files are processed in this browser and are not uploaded.</p>
+                        </div>
                     </article>
                 </section>
 
@@ -351,7 +354,7 @@
                         <div><p class="section-label">Step 03</p><h3 id="lab-target-title">Choose target file</h3></div>
                         <span class="lab-step-status" id="lab-target-status">Not ready</span>
                     </div>
-                    <p class="lab-panel-description" id="lab-target-help">Complete Steps 01 and 02 first.</p>
+                    <p class="lab-panel-description" id="lab-target-help">Complete the reference setup, Step 01, and Step 02 first.</p>
                     <div id="lab-target-control">
                         <label class="select-label" id="lab-target-label" for="lab-target-trigger">Relative file path</label>
                         <select class="lab-select" id="lab-target-select" disabled hidden>
@@ -427,12 +430,6 @@
                         <p class="section-kicker">Verification Records</p>
                         <h2 id="history-page-title">Verification History</h2>
                         <p>Review previous backup integrity checks and inspect detected differences.</p>
-                    </div>
-                    <div class="local-processing" aria-label="History storage information">
-                        <div class="local-processing-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24"><path d="M4 5h16v15H4zM8 3v4m8-4v4M4 10h16"/><path d="M8 14h3m2 0h3m-8 3h3"/></svg>
-                        </div>
-                        <div><strong>Local browser history</strong><span>Stored on this device</span></div>
                     </div>
                 </div>
 

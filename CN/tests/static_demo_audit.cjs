@@ -214,6 +214,15 @@ async function auditBrowser(executablePath, browserLabel, full) {
 
   await page.getByRole('link', {name: 'History', exact: true}).click();
   await page.waitForFunction(() => document.querySelector('#history-total-count').textContent === '5');
+  ok(await page.locator('#history-view .local-processing').count() === 0, 'History technical status card removed');
+  assert.deepEqual(await Promise.all(['total', 'clean', 'issues'].map(key =>
+    page.locator(`#history-${key}-count`).textContent())), ['5', '1', '4']); checks += 1;
+  await page.getByRole('button', {name: 'View Details'}).first().click();
+  ok(await page.locator('#history-detail-panel').isVisible(), 'history details');
+  const historyDownloadEvent = page.waitForEvent('download');
+  await page.locator('#history-export-csv-button').click();
+  ok(fs.readFileSync(await (await historyDownloadEvent).path(), 'utf8').includes('File Name'), 'history CSV export');
+  await page.locator('#history-detail-close').click();
   await page.locator('#history-search-input').fill('mixed');
   ok((await page.locator('#history-result-count').textContent()).startsWith('1 of 5'), 'history search');
   await page.locator('#history-search-input').fill('');
@@ -224,6 +233,9 @@ async function auditBrowser(executablePath, browserLabel, full) {
   ok(await page.locator('.history-item h4').first().textContent() === 'backup_clean', 'history oldest sort');
 
   await page.getByRole('link', {name: 'Error Lab', exact: true}).click();
+  ok((await page.locator('#lab-backup-card .folder-permission-note').textContent()).trim() === 'Folder access requires browser permission. Files are processed in this browser and are not uploaded.', 'Error Lab permission note matches Verification');
+  ok(await page.locator('#lab-backup-card .folder-permission-note svg').count() === 1, 'Error Lab permission note icon');
+  ok(await page.locator('#lab-target-help').textContent() === 'Complete the reference setup, Step 01, and Step 02 first.', 'Error Lab Step 03 initial instruction');
   await selectFolder(page, '#lab-select-backup-button', 'backup_clean', '#lab-backup-name');
   const labScenarios = [
     ['modify-byte', 'image.png', [4, 1, 0, 0]], ['append-data', 'notes.txt', [4, 1, 0, 0]],
@@ -240,6 +252,9 @@ async function auditBrowser(executablePath, browserLabel, full) {
     assert.deepEqual(await summary(page, 'lab-summary-'), totals); checks += 1;
     ok(await page.locator('#lab-result-badge').textContent() === 'Expected result detected', `${method} detected`);
   }
+  await page.locator('#lab-reset-button').click();
+  ok(await page.locator('#lab-backup-name').textContent() === 'No backup folder selected', 'Error Lab reset clears backup');
+  ok(await page.locator('input[name="lab-simulation"]:not(:disabled)').count() === 0, 'Error Lab reset disables methods');
 
   for (const route of ['verification', 'error-lab', 'history', 'about']) {
     await page.goto(`${base}/#${route}`);
@@ -263,6 +278,8 @@ async function auditBrowser(executablePath, browserLabel, full) {
   await page.getByRole('button', {name: 'Clear History'}).click();
   await page.locator('#history-clear-confirm').click();
   await page.waitForFunction(() => document.querySelector('#history-total-count').textContent === '0');
+  assert.deepEqual(await Promise.all(['total', 'clean', 'issues'].map(key =>
+    page.locator(`#history-${key}-count`).textContent())), ['0', '0', '0']); checks += 1;
   ok((await page.evaluate(() => localStorage.getItem('usb-backup-verifier.static-history.v1'))) === null, 'history clear preserves reference');
   ok(errors.length === 0, `console errors: ${errors.join('; ')}`);
   ok(requests.every(url => url.startsWith(base) && !url.includes('/api/')), 'static-only requests');

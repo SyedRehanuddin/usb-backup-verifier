@@ -139,6 +139,6 @@ test('static distribution uses browser folders without backend endpoints', () =>
   visit(path.join(root, 'static_demo'));
   const source = files.filter(file => /\.(html|js|css)$/.test(file)).map(file => fs.readFileSync(file, 'utf8')).join('\n');
   for (const forbidden of ['/api/', 'FormData', 'multipart/form-data']) assert.equal(source.includes(forbidden), false, forbidden);
-  for (const required of ['showDirectoryPicker', 'webkitdirectory', 'Browser permission is required', 'type="file"']) assert.equal(source.includes(required), true, required);
+  for (const required of ['showDirectoryPicker', 'webkitdirectory', 'Folder access requires browser permission', 'type="file"']) assert.equal(source.includes(required), true, required);
   assert.equal(fs.readFileSync(path.join(root, 'static_demo', 'index.html'), 'utf8').includes('js/demo-data.js'), false);
 });
