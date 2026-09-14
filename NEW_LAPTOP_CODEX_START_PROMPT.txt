@@ -1,0 +1,82 @@
+You are continuing an existing Computer Networks project named “USB Backup Verification Utility — CRC-32 Based Backup Integrity Verification” (UI brand: “USB Backup Verifier”). This is an established, working Group 2 repository. Do not rebuild it from scratch and do not assume that the hosted and local applications are the same runtime.
+
+Before modifying anything:
+
+1. Locate the Git repository root. The actual application should be in the CN subfolder, while render.yaml and the handoff documents are at the repository root.
+2. Read PROJECT_HANDOFF_MASTER.md completely.
+3. Read PROJECT_FILE_MANIFEST.md and NEW_LAPTOP_SETUP_CHECKLIST.md.
+4. Inspect the actual current source/configuration relevant to the requested change. Treat the checked-out repository as authoritative if it differs from the handoff.
+5. Run:
+   git status --short --branch
+   git branch --show-current
+   git remote -v
+   git log -10 --oneline --decorate
+   git rev-list --left-right --count origin/main...main
+6. Report any divergence, local modifications, untracked files, or unexpected branch before making changes. Never overwrite unexplained work.
+7. Create/activate the Python virtual environment and run the current safe suites before substantial work:
+   cd CN
+   python -m unittest discover -s tests -p "test_*.py"
+   node --test tests/test_history_ui.js tests/test_select_picker.js tests/test_simulation.js tests/test_static_demo.js tests/test_verification_results.js
+8. If Node, Playwright, Chrome, or Edge is available, also run tests/static_demo_audit.cjs. Its expected current result at handoff is 104 checks passed.
+
+Architecture that must be respected:
+
+- LOCAL APPLICATION: CN/web_app.py + CN/app + CN/templates + CN/static. It is a Windows-local FastAPI/Jinja application. It uses a Tkinter native directory chooser, opaque server-side folder tokens, Python zlib CRC-32, JSON manifest/history persistence, and backend CSV generation. Default URL: http://127.0.0.1:8000.
+- HOSTED STATIC DEMONSTRATION: CN/static_demo. This is what the current root render.yaml publishes. It has no FastAPI/backend request path. It uses showDirectoryPicker with a webkitdirectory fallback, table-based JavaScript CRC-32, metadata-only browser localStorage, in-memory Error Lab bytes, and Blob CSV downloads.
+- A change to one tree does not automatically change the other. Scope every edit deliberately. Do not blindly copy files between CN/static and CN/static_demo.
+
+Externally confirmed academic and artifact information (not derived from Git):
+
+- Course: Computer Networks.
+- Group: Group 2; Faculty: Dr. Aparna Sajeev; team size: 5.
+- Team: Syed Rehanuddin (2503A51037), P. Nikhil (2503A51038), R. Nagavignesh (2503A51039), B. Abhinay (2503A51040), and K. Hasini (2503A51041).
+- Current Render Static Site: https://usb-backup-verifier-static.onrender.com. It was made static to avoid the earlier free Python Render Web Service cold-start delay; do not claim FastAPI/Python runs in the hosted runtime.
+- Final report outside Git: USB_Backup_Verifier_Project_Report_Final_Submission.pdf, approximately 20 pages.
+- Final screenshots outside Git: 15 PNG files in C:\Users\Ayesha Nishath\Downloads\ScrnShts, enumerated in PROJECT_HANDOFF_MASTER.md and PROJECT_FILE_MANIFEST.md.
+- Presentation: in progress / external to Git; do not call a PPTX final until its actual file is supplied and verified.
+- Computer Networks framing: original/sender data → CRC generation → transmission/backup copy → receiver-side CRC → comparison → valid/error detected. This is file-level error detection, not a complete socket protocol; socket integration is possible future work.
+
+Core invariants:
+
+- Preserve recursive root-relative path comparison and nested/lab_record.bin.
+- Preserve Verified, Corrupted, Missing, and Extra semantics and deterministic ordering.
+- Preserve uppercase eight-digit CRC-32 output.
+- Keep Error Lab M1–M5 non-destructive and fresh-baseline; Run Again must never stack mutations.
+- Keep local absolute paths out of browser responses.
+- Never persist browser directory handles or file bytes in localStorage.
+- Clearing History must preserve the trusted reference.
+- The hosted static site must not gain an API/Python/server dependency without explicit architectural approval.
+- Preserve path validation, symlink handling, atomic JSON writes, History schema/100-record cap, CSV BOM/quoting/Unicode/formula protections.
+- Preserve the current static Render Blueprint unless the user explicitly requests deployment changes.
+
+Current verified baseline at handoff:
+
+- Git branch: main
+- HEAD: 6821b2408227959b72778f6672d3c9b775721378 (Polish final About page)
+- main matched origin/main before the four handoff files were created.
+- Python: 129/129 passing.
+- JavaScript: 38/38 passing.
+- Hosted-static Edge/Chrome audit: 104/104 checks passing.
+- Verification fixtures: clean 5/0/0/0; corrupted 4/1/0/0; missing 4/0/1/0; extra 5/0/0/1; mixed 3/1/1/1.
+- All five Error Simulation Lab detection paths were externally confirmed in the final screenshot set.
+
+Important cautions:
+
+- The four handoff files were intentionally left uncommitted for owner approval. Do not discard or commit them without checking the current Git state and user intent.
+- CN/data/manifests/current_reference.json and CN/data/history/verification_history.json are committed older sample/runtime state. Their old CRC/size values do not match the current compact demo_data bytes. Do not treat them as the current fixture oracle; generate a fresh local reference for demonstrations.
+- The hosted comparator currently checks CRC equality but does not explicitly add the local comparator’s size-equality check. Understand this before changing parity behavior.
+- Python requirements are unpinned. There is no committed package.json/Playwright lockfile.
+- No official lab guideline PDF, project report PDF, or PPT is present **inside the repository**. The final report PDF is externally confirmed, while the presentation remains externally in progress; both must be transferred separately.
+
+Continue from “Next recommended work” in PROJECT_HANDOFF_MASTER.md. The first decision is to obtain/inspect the official latest lab rubric and confirm whether a separate binary/text/manual polynomial CRC-3/4/8/32 sender/receiver demonstration is mandatory. Do not implement guessed rubric features until that requirement is confirmed. If confirmed, add the educational flow without replacing or destabilizing the finished backup verifier.
+
+For every task:
+
+- Lead with evidence from current files.
+- Keep changes focused and preserve unrelated user work.
+- Use tests proportionate to the change.
+- Review git diff and git diff --check.
+- Never commit, push, deploy, clear real History/reference, or perform destructive Git operations unless the user explicitly authorizes it.
+- At completion, report exact files changed, validation performed, results, remaining risks, and Git status.
+
+First reply to the user should confirm: repository path, branch/HEAD, whether the handoff matches current Git state, local-versus-hosted understanding, test baseline, and the next requested task. Do not start rebuilding or redesigning the project.
